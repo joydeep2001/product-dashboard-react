@@ -1,6 +1,6 @@
 import "./App.css";
 import ProductTable from "./components/ProductTable";
-import { useContext, useMemo } from "react";
+import { useContext, useMemo, useState } from "react";
 import generateMockProducts, { categorySet } from "./utils/dataGenerator";
 import Header from "./components/Header";
 import { CartProvider, CartContext } from "./context/cartContext";
@@ -8,6 +8,8 @@ import CartSidebar from "./components/Cart";
 import StatsCards from "./components/StatCards";
 
 function Dashboard() {
+  const [query, setQuery] = useState("");
+
   const mockProducts = useMemo(() => generateMockProducts(1200), []);
   const { isOpen, setOpen } = useContext(CartContext);
 
@@ -30,7 +32,7 @@ function Dashboard() {
   return (
     <>
       <CartProvider>
-        <Header onCartOpen={toggleCart} />
+        <Header query={query} setQuery={setQuery} onCartOpen={toggleCart} />
         <StatsCards
           stats={[
             { title: "Total Products", value: mockProducts.length, icon: "📦" },
@@ -54,7 +56,11 @@ function Dashboard() {
             },
           ]}
         />
-        <ProductTable allProducts={mockProducts} />
+        <ProductTable
+          query={query}
+          setQuery={setQuery}
+          allProducts={mockProducts}
+        />
         <CartSidebar isOpen={isOpen} onClose={toggleCart} />
       </CartProvider>
     </>

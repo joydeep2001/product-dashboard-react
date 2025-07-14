@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
 import { CartContext } from "../context/cartContext";
 // import Draggable from "react-draggable";
+import { debounce, searchProducts } from "../utils/search";
 
-const ProductTable = ({ allProducts }) => {
+const ProductTable = ({ allProducts, query, setQuery }) => {
   const [products, setProducts] = useState([]);
-  const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
@@ -23,23 +23,6 @@ const ProductTable = ({ allProducts }) => {
 
   const PRODUCTS_PER_PAGE = 10;
 
-  const debounce = (fn, delay = 300) => {
-    let timeout;
-    return (...args) => {
-      clearTimeout(timeout);
-      timeout = setTimeout(() => fn(...args), delay);
-    };
-  };
-
-  const searchProducts = (products, query) => {
-    if (!query) return products;
-    const lower = query.toLowerCase();
-    return products.filter(
-      (p) =>
-        p.name.toLowerCase().includes(lower) ||
-        p.category.toLowerCase().includes(lower)
-    );
-  };
 
   const debouncedSearch = useMemo(
     () =>

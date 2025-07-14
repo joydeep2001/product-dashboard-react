@@ -8,12 +8,11 @@ const debounce = (fn, delay = 300) => {
 
 const searchProducts = (products, query) => {
   if (!query) return products;
-
-  const lowerQuery = query.toLowerCase();
+  const lower = query.toLowerCase();
   return products.filter(
-    (product) =>
-      product.name.toLowerCase().includes(lowerQuery) ||
-      product.category.toLowerCase().includes(lowerQuery)
+    (p) =>
+      p.name.toLowerCase().includes(lower) ||
+      p.category.toLowerCase().includes(lower)
   );
 };
 

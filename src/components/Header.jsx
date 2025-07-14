@@ -2,6 +2,7 @@ import { useContext } from "react";
 import { IoMdCart } from "react-icons/io";
 import { CartContext } from "../context/cartContext";
 
+
 const Header = ({ cartCount, query, setQuery, onCartOpen }) => {
   const { cartItems } = useContext(CartContext);
   return (
