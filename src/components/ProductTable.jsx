@@ -23,7 +23,6 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
 
   const PRODUCTS_PER_PAGE = 10;
 
-
   const debouncedSearch = useMemo(
     () =>
       debounce((q) => {
@@ -61,6 +60,8 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
     page * PRODUCTS_PER_PAGE
   );
 
+  const totalPages = Math.ceil(products.length / PRODUCTS_PER_PAGE);
+
   const toggleSort = (key) => {
     if (sortField === key) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -70,13 +71,63 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
     }
   };
 
-  // const handleDrag = (i, j) => {
-  //   const newCols = [...columns];
-  //   const temp = newCols[i];
-  //   newCols[i] = newCols[j];
-  //   newCols[j] = temp;
-  //   setColumns(newCols);
-  // };
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+    
+    if (totalPages <= maxVisiblePages) {
+      // Show all pages if total pages is less than max visible
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      // Show first page
+      pageNumbers.push(1);
+      
+      // Calculate start and end of middle pages
+      let start = Math.max(2, page - 1);
+      let end = Math.min(totalPages - 1, page + 1);
+      
+      // Adjust if we're near the beginning
+      if (page <= 3) {
+        end = Math.min(totalPages - 1, 4);
+      }
+      
+      // Adjust if we're near the end
+      if (page >= totalPages - 2) {
+        start = Math.max(2, totalPages - 3);
+      }
+      
+      // Add ellipsis if there's a gap
+      if (start > 2) {
+        pageNumbers.push('...');
+      }
+      
+      // Add middle pages
+      for (let i = start; i <= end; i++) {
+        pageNumbers.push(i);
+      }
+      
+      // Add ellipsis if there's a gap
+      if (end < totalPages - 1) {
+        pageNumbers.push('...');
+      }
+      
+      // Show last page
+      if (totalPages > 1) {
+        pageNumbers.push(totalPages);
+      }
+    }
+    
+    return pageNumbers;
+  };
+
+  const handlePageClick = (pageNum) => {
+    if (pageNum !== '...' && pageNum !== page) {
+      setPage(pageNum);
+    }
+  };
 
   return (
     <div className="p-2 sm:p-4 w-full overflow-x-auto">
@@ -92,17 +143,8 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
         <thead>
           <tr className="bg-gray-100">
             {columns.map((col, idx) => (
-              // <Draggable
-              //   key={col.key}
-              //   axis="x"
-              //   onStop={(e, data) => {
-              //     const targetIdx = Math.round(data.x / 100);
-              //     if (targetIdx >= 0 && targetIdx < columns.length) {
-              //       handleDrag(idx, targetIdx);
-              //     }
-              //   }}
-              // >
               <th
+                key={col.key}
                 className="p-2 whitespace-nowrap cursor-pointer"
                 onClick={() =>
                   col.key !== "actions" ? toggleSort(col.key) : null
@@ -111,7 +153,6 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
                 {col.label}
                 {sortField === col.key && (sortOrder === "asc" ? " ▲" : " ▼")}
               </th>
-              // </Draggable>
             ))}
           </tr>
         </thead>
@@ -142,28 +183,50 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
         </tbody>
       </table>
 
-      <div className="flex justify-between items-center mt-4 text-sm">
+      {/* Updated Pagination */}
+      <div className="flex justify-center items-center mt-4 gap-2 text-sm">
+        {/* Previous button */}
         <button
-          className="px-3 py-1 border rounded disabled:opacity-50"
+          className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
           onClick={() => setPage((p) => Math.max(p - 1, 1))}
           disabled={page === 1}
         >
           Prev
         </button>
-        <span>
-          Page {page} of {Math.ceil(products.length / PRODUCTS_PER_PAGE)}
-        </span>
+
+        {/* Page numbers */}
+        {getPageNumbers().map((pageNum, index) => (
+          <button
+            key={index}
+            className={`px-3 py-1 border rounded ${
+              pageNum === page
+                ? "bg-indigo-600 text-white"
+                : pageNum === '...'
+                ? "cursor-default"
+                : "hover:bg-gray-100"
+            }`}
+            onClick={() => handlePageClick(pageNum)}
+            disabled={pageNum === '...'}
+          >
+            {pageNum}
+          </button>
+        ))}
+
+        {/* Next button */}
         <button
-          className="px-3 py-1 border rounded disabled:opacity-50"
+          className="px-3 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-100"
           onClick={() =>
-            setPage((p) =>
-              Math.min(p + 1, Math.ceil(products.length / PRODUCTS_PER_PAGE))
-            )
+            setPage((p) => Math.min(p + 1, totalPages))
           }
-          disabled={page === Math.ceil(products.length / PRODUCTS_PER_PAGE)}
+          disabled={page === totalPages}
         >
           Next
         </button>
+      </div>
+
+      {/* Page info */}
+      <div className="text-center mt-2 text-xs text-gray-600">
+        Showing {(page - 1) * PRODUCTS_PER_PAGE + 1} to {Math.min(page * PRODUCTS_PER_PAGE, products.length)} of {products.length} results
       </div>
     </div>
   );
