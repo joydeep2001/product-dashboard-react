@@ -3,11 +3,14 @@ import { CartContext } from "../context/cartContext";
 // import Draggable from "react-draggable";
 import { debounce, searchProducts } from "../utils/search";
 
-const ProductTable = ({ allProducts, query, setQuery }) => {
+const ProductTable = ({ allProducts, query, setQuery, onDeleteProduct, onEditProduct }) => {
   const [products, setProducts] = useState([]);
   const [page, setPage] = useState(1);
   const [sortField, setSortField] = useState(null);
   const [sortOrder, setSortOrder] = useState("asc");
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
   const { addToCart } = useContext(CartContext);
 
@@ -123,6 +126,46 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
     return pageNumbers;
   };
 
+  const handleEdit = (product) => {
+    setEditingProduct({ ...product });
+  };
+
+  const handleSaveEdit = () => {
+    if (editingProduct && onEditProduct) {
+      onEditProduct(editingProduct);
+      setEditingProduct(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingProduct(null);
+  };
+
+  const handleDelete = (product) => {
+    setProductToDelete(product);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = () => {
+    if (productToDelete && onDeleteProduct) {
+      onDeleteProduct(productToDelete.id);
+      setShowDeleteModal(false);
+      setProductToDelete(null);
+    }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setProductToDelete(null);
+  };
+
+  const handleEditInputChange = (field, value) => {
+    setEditingProduct(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handlePageClick = (pageNum) => {
     if (pageNum !== '...' && pageNum !== page) {
       setPage(pageNum);
@@ -163,21 +206,89 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
                 <td key={col.key} className="p-2 text-xs">
                   {col.key === "actions" ? (
                     <div className="flex gap-2">
-                      <button className="text-blue-600">View</button>
-                      <button className="text-green-600">Edit</button>
-                      <button className="text-red-600">Delete</button>
+                      <button className="text-blue-600 hover:underline">View</button>
+                      <button 
+                        onClick={() => handleEdit(product)}
+                        className="text-green-600 hover:underline"
+                      >
+                        Edit
+                      </button>
+                      <button 
+                        onClick={() => handleDelete(product)}
+                        className="text-red-600 hover:underline"
+                      >
+                        Delete
+                      </button>
                       <button
                         onClick={() => addToCart(product)}
-                        className="bg-indigo-600 text-white px-2 rounded"
+                        className="bg-indigo-600 text-white px-2 py-1 rounded hover:bg-indigo-700"
                       >
                         Add to Cart
                       </button>
                     </div>
+                  ) : editingProduct && editingProduct.id === product.id ? (
+                    // Edit mode for this row
+                    col.key === "id" ? (
+                      product[col.key]
+                    ) : col.key === "price" ? (
+                      <input
+                        type="number"
+                        value={editingProduct[col.key]}
+                        onChange={(e) => handleEditInputChange(col.key, parseFloat(e.target.value) || 0)}
+                        className="w-full p-1 border rounded text-xs"
+                        step="0.01"
+                      />
+                    ) : col.key === "stock" ? (
+                      <input
+                        type="number"
+                        value={editingProduct[col.key]}
+                        onChange={(e) => handleEditInputChange(col.key, parseInt(e.target.value) || 0)}
+                        className="w-full p-1 border rounded text-xs"
+                      />
+                    ) : col.key === "status" ? (
+                      <select
+                        value={editingProduct[col.key]}
+                        onChange={(e) => handleEditInputChange(col.key, e.target.value)}
+                        className="w-full p-1 border rounded text-xs"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="discontinued">Discontinued</option>
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        value={editingProduct[col.key]}
+                        onChange={(e) => handleEditInputChange(col.key, e.target.value)}
+                        className="w-full p-1 border rounded text-xs"
+                      />
+                    )
                   ) : (
-                    product[col.key]
+                    // Display mode
+                    col.key === "price" ? `${product[col.key]}` : product[col.key]
                   )}
                 </td>
               ))}
+              
+              {/* Edit action buttons */}
+              {editingProduct && editingProduct.id === product.id && (
+                <td className="p-2">
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleSaveEdit}
+                      className="bg-green-600 text-white px-2 py-1 rounded text-xs hover:bg-green-700"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={handleCancelEdit}
+                      className="bg-gray-600 text-white px-2 py-1 rounded text-xs hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -228,6 +339,33 @@ const ProductTable = ({ allProducts, query, setQuery }) => {
       <div className="text-center mt-2 text-xs text-gray-600">
         Showing {(page - 1) * PRODUCTS_PER_PAGE + 1} to {Math.min(page * PRODUCTS_PER_PAGE, products.length)} of {products.length} results
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold mb-4">Confirm Delete</h3>
+            <p className="text-gray-600 mb-6">
+              Are you sure you want to delete <strong>{productToDelete?.name}</strong>? 
+              This action cannot be undone.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
