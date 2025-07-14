@@ -11,6 +11,8 @@ const ProductTable = ({ allProducts, query, setQuery, onDeleteProduct, onEditPro
   const [editingProduct, setEditingProduct] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [productToDelete, setProductToDelete] = useState(null);
+  const [draggedColumn, setDraggedColumn] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
 
   const { addToCart } = useContext(CartContext);
 
@@ -166,6 +168,58 @@ const ProductTable = ({ allProducts, query, setQuery, onDeleteProduct, onEditPro
     }));
   };
 
+  // Drag and Drop handlers
+  const handleDragStart = (e, columnIndex) => {
+    setDraggedColumn(columnIndex);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/html', e.target.outerHTML);
+    e.target.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1';
+    setDraggedColumn(null);
+    setDragOverIndex(null);
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleDragEnter = (e, columnIndex) => {
+    e.preventDefault();
+    setDragOverIndex(columnIndex);
+  };
+
+  const handleDragLeave = (e) => {
+    // Only clear drag over if we're actually leaving the column
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOverIndex(null);
+    }
+  };
+
+  const handleDrop = (e, dropIndex) => {
+    e.preventDefault();
+    
+    if (draggedColumn === null || draggedColumn === dropIndex) {
+      return;
+    }
+
+    const newColumns = [...columns];
+    const draggedItem = newColumns[draggedColumn];
+    
+    // Remove the dragged item
+    newColumns.splice(draggedColumn, 1);
+    
+    // Insert at the new position
+    newColumns.splice(dropIndex, 0, draggedItem);
+    
+    setColumns(newColumns);
+    setDraggedColumn(null);
+    setDragOverIndex(null);
+  };
+
   const handlePageClick = (pageNum) => {
     if (pageNum !== '...' && pageNum !== page) {
       setPage(pageNum);
@@ -174,6 +228,14 @@ const ProductTable = ({ allProducts, query, setQuery, onDeleteProduct, onEditPro
 
   return (
     <div className="p-2 sm:p-4 w-full overflow-x-auto">
+      {/* Drag instructions */}
+      <div className="mb-2 text-xs text-gray-500 flex items-center gap-2">
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+        </svg>
+        Drag column headers to reorder • Click to sort
+      </div>
+
       <input
         type="text"
         placeholder="Search by name or category"
@@ -182,23 +244,62 @@ const ProductTable = ({ allProducts, query, setQuery, onDeleteProduct, onEditPro
         onChange={(e) => setQuery(e.target.value)}
       />
 
-      <table className="min-w-full border text-sm">
-        <thead>
-          <tr className="bg-gray-100">
-            {columns.map((col, idx) => (
-              <th
-                key={col.key}
-                className="p-2 whitespace-nowrap cursor-pointer"
-                onClick={() =>
-                  col.key !== "actions" ? toggleSort(col.key) : null
-                }
-              >
-                {col.label}
-                {sortField === col.key && (sortOrder === "asc" ? " ▲" : " ▼")}
-              </th>
-            ))}
-          </tr>
-        </thead>
+      <div className="relative">
+        <table className="min-w-full border text-sm">
+          <thead>
+            <tr className="bg-gray-100">
+              {columns.map((col, idx) => (
+                <th
+                  key={col.key}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, idx)}
+                  onDragEnd={handleDragEnd}
+                  onDragOver={handleDragOver}
+                  onDragEnter={(e) => handleDragEnter(e, idx)}
+                  onDragLeave={handleDragLeave}
+                  onDrop={(e) => handleDrop(e, idx)}
+                  className={`text-center p-2 whitespace-nowrap cursor-move select-none transition-all duration-200 ${
+                    draggedColumn === idx ? 'opacity-50 scale-95' : ''
+                  } ${
+                    dragOverIndex === idx && draggedColumn !== idx 
+                      ? 'bg-blue-100 border-l-4 border-blue-500' 
+                      : ''
+                  } ${
+                    col.key !== "actions" ? 'hover:bg-gray-200' : ''
+                  }`}
+                  onClick={() =>
+                    col.key !== "actions" && draggedColumn === null ? toggleSort(col.key) : null
+                  }
+                  title={`Drag to reorder • Click to sort ${col.key !== "actions" ? col.label : ''}`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-1">
+                      {/* Drag handle icon */}
+                      <svg 
+                        className="w-3 h-3 text-gray-400" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path 
+                          strokeLinecap="round" 
+                          strokeLinejoin="round" 
+                          strokeWidth={2} 
+                          d="M4 6h16M4 10h16M4 14h16M4 18h16" 
+                        />
+                      </svg>
+                      {col.label}
+                    </span>
+                    {sortField === col.key && (
+                      <span className="ml-1">
+                        {sortOrder === "asc" ? " ▲" : " ▼"}
+                      </span>
+                    )}
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
         <tbody>
           {paginated.map((product) => (
             <tr key={product.id} className="border-t hover:bg-gray-50">
@@ -293,6 +394,7 @@ const ProductTable = ({ allProducts, query, setQuery, onDeleteProduct, onEditPro
           ))}
         </tbody>
       </table>
+      </div>
 
       {/* Updated Pagination */}
       <div className="flex justify-center items-center mt-4 gap-2 text-sm">
