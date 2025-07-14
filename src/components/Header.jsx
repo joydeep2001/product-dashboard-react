@@ -2,7 +2,6 @@ import { useContext } from "react";
 import { IoMdCart } from "react-icons/io";
 import { CartContext } from "../context/cartContext";
 
-
 const Header = ({ cartCount, query, setQuery, onCartOpen }) => {
   const { cartItems } = useContext(CartContext);
   return (
@@ -27,9 +26,13 @@ const Header = ({ cartCount, query, setQuery, onCartOpen }) => {
           <span onClick={onCartOpen} className="text-2xl cursor-pointer">
             <IoMdCart />
           </span>
-          <span className="absolute -top-2 -right-2 bg-red-400 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
-            {cartItems.length}
-          </span>
+          {cartItems.length > 0 ? (
+            <span className="absolute -top-2 -right-2 bg-red-400 text-white text-xs font-semibold px-1.5 py-0.5 rounded-full">
+              {cartItems.length}
+            </span>
+          ) : (
+            <></>
+          )}
         </div>
       </div>
     </header>
