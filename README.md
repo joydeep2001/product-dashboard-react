@@ -12,7 +12,7 @@ A responsive product dashboard web application built using **React**, **Tailwind
 1. **Clone the Repository**
 
    ```bash
-   git clone https://github.com/your-username/product-dashboard.git
+   git clone https://github.com/joydeep2001/product-dashboard.git
    cd product-dashboard
    ```
 
